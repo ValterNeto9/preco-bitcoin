@@ -11,22 +11,45 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   
-  String _preco = "0";
-  
-  void _obterPreco() async{
+  Future<Map> _obterPreco() async{
     String _url = "https://blockchain.info/ticker";
     http.Response response = await http.get(_url);
 
-    Map<String, dynamic> res = json.decode(response.body);
-
-    setState(() {
-      _preco = res["BRL"]["buy"].toString();
-    });
-
+    return json.decode(response.body);
   }
   
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<Map>(
+        future: _obterPreco(),
+        builder: ( context, snapshot ){
+          String _preco;
+          switch( snapshot.connectionState ){
+            case ConnectionState.none:
+              print('none');
+              break;
+            case ConnectionState.waiting:
+              print('Carregando...');
+              _preco = 'Carregando...';
+              break;
+            case ConnectionState.active:
+              print('active');
+              break;
+            case ConnectionState.done:
+              if( snapshot.hasError ){
+                _preco = 'Erro ao recuperar os dados';
+              } else {
+                double resultado = snapshot.data["BRL"]["buy"];
+                _preco = resultado.toString();
+              }
+          }
+
+          return this._geraInterface( _preco );
+        }
+    );
+  }
+
+  Widget _geraInterface( String _preco ){
     return Scaffold(
       body: Container(
         padding: EdgeInsets.all(32),
@@ -36,13 +59,13 @@ class _HomeState extends State<Home> {
             children: <Widget>[
               Image.asset("images/bitcoin.png"),
               Padding(
-                padding: EdgeInsets.all(30),
-                child: Text( 
-                  "R\$ ${ _preco }",
-                  style: TextStyle(
-                    fontSize: 35,
-                  ),
-                )
+                  padding: EdgeInsets.all(30),
+                  child: Text(
+                    "R\$ $_preco ",
+                    style: TextStyle(
+                      fontSize: 35,
+                    ),
+                  )
               ),
               RaisedButton(
                 onPressed: _obterPreco,
@@ -51,8 +74,8 @@ class _HomeState extends State<Home> {
                 child: Text(
                   "Atualizar",
                   style: TextStyle(
-                    fontSize: 20,
-                    color: Colors.white
+                      fontSize: 20,
+                      color: Colors.white
                   ),
                 ),
               )
